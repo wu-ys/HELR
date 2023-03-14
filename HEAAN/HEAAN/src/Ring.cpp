@@ -31,7 +31,7 @@ Ring::Ring(long logN, long logQ, double sigma, long h) : logN(logN), logQ(logQ),
 	Q = power2_ZZ(logQ);
 	QQ = power2_ZZ(logQQ);
 
-	qpows = new ZZ[logQQ + 1];
+	qpows = new ZZ[logQQ + 1];  // powers of 2 from 1 to 2^logQQ
 	qpows[0] = ZZ(1);
 	for (long i = 1; i < logQQ + 1; ++i) {
 		qpows[i] = qpows[i - 1] << 1;

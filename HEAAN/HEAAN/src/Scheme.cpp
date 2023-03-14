@@ -13,7 +13,7 @@
 
 #define PRIME_BIT_SIZE log2((double)NTL_SP_BOUND)
 
-Scheme::Scheme(SecretKey& secretKey, Ring& ring, bool isSerialized) : ring(ring), isSerialized(isSerialized) {
+Scheme::Scheme(SecretKey& secretKey, Ring& ring, bool isSerialized, bool _counting) : ring(ring), isSerialized(isSerialized), counting(_counting) {
 	addEncKey(secretKey);
 	addMultKey(secretKey);
 };
@@ -347,6 +347,8 @@ complex<double> Scheme::decryptSingle(SecretKey& secretKey, Ciphertext& cipher) 
 //-----------------------------------------
 
 Ciphertext Scheme::negate(Ciphertext& cipher) {
+    if (counting)
+        counter.Count_Negate();
 	ZZ* ax = new ZZ[ring.N];
 	ZZ* bx = new ZZ[ring.N];
 
@@ -357,11 +359,17 @@ Ciphertext Scheme::negate(Ciphertext& cipher) {
 }
 
 void Scheme::negateAndEqual(Ciphertext& cipher) {
+    if (counting)
+        counter.Count_Negate();
+
 	ring.negateAndEqual(cipher.ax);
 	ring.negateAndEqual(cipher.bx);
 }
 
 Ciphertext Scheme::add(Ciphertext& cipher1, Ciphertext& cipher2) {
+    if (counting)
+        counter.Count_Add();
+
 	ZZ q = ring.qpows[cipher1.logq];
 
 	ZZ* ax = new ZZ[ring.N];
@@ -374,6 +382,9 @@ Ciphertext Scheme::add(Ciphertext& cipher1, Ciphertext& cipher2) {
 }
 
 void Scheme::addAndEqual(Ciphertext& cipher1, Ciphertext& cipher2) {
+    if (counting)
+        counter.Count_Add();
+
 	ZZ q = ring.qpows[cipher1.logq];
 
 	ring.addAndEqual(cipher1.ax, cipher2.ax, q);
@@ -383,6 +394,9 @@ void Scheme::addAndEqual(Ciphertext& cipher1, Ciphertext& cipher2) {
 //-----------------------------------------
 
 Ciphertext Scheme::addConst(Ciphertext& cipher, double cnst, long logp) {
+    if (counting)
+        counter.Count_Addconst();
+
 	ZZ q = ring.qpows[cipher.logq];
 	Ciphertext res = cipher;
 	ZZ cnstZZ = logp < 0 ? EvaluatorUtils::scaleUpToZZ(cnst, cipher.logp) : EvaluatorUtils::scaleUpToZZ(cnst, logp);
@@ -391,36 +405,51 @@ Ciphertext Scheme::addConst(Ciphertext& cipher, double cnst, long logp) {
 }
 
 Ciphertext Scheme::addConst(Ciphertext& cipher, RR& cnst, long logp) {
-	ZZ q = ring.qpows[cipher.logq];
-	Ciphertext res = cipher;
+    if (counting)
+        counter.Count_Addconst();
+
+    ZZ q = ring.qpows[cipher.logq];
+    Ciphertext res = cipher;
 	ZZ cnstZZ = logp < 0 ? EvaluatorUtils::scaleUpToZZ(cnst, cipher.logp) : EvaluatorUtils::scaleUpToZZ(cnst, logp);
 	AddMod(res.bx[0], cipher.bx[0], cnstZZ, q);
 	return res;
 }
 
 Ciphertext Scheme::addConst(Ciphertext& cipher, complex<double> cnst, long logp) {
-	ZZ q = ring.qpows[cipher.logq];
-	Ciphertext res = cipher;
+    if (counting)
+        counter.Count_Addconst();
+
+    ZZ q = ring.qpows[cipher.logq];
+    Ciphertext res = cipher;
 	ZZ cnstZZ = logp < 0 ? EvaluatorUtils::scaleUpToZZ(cnst.real(), cipher.logp) : EvaluatorUtils::scaleUpToZZ(cnst.real(), logp);
 	AddMod(res.bx[0], cipher.bx[0], cnstZZ, q);
 	return res;
 }
 
 void Scheme::addConstAndEqual(Ciphertext& cipher, double cnst, long logp) {
-	ZZ q = ring.qpows[cipher.logq];
-	ZZ cnstZZ = logp < 0 ? EvaluatorUtils::scaleUpToZZ(cnst, cipher.logp) : EvaluatorUtils::scaleUpToZZ(cnst, logp);
+    if (counting)
+        counter.Count_Addconst();
+
+    ZZ q = ring.qpows[cipher.logq];
+    ZZ cnstZZ = logp < 0 ? EvaluatorUtils::scaleUpToZZ(cnst, cipher.logp) : EvaluatorUtils::scaleUpToZZ(cnst, logp);
 	AddMod(cipher.bx[0], cipher.bx[0], cnstZZ, q);
 }
 
 void Scheme::addConstAndEqual(Ciphertext& cipher, RR& cnst, long logp) {
-	ZZ q = ring.qpows[cipher.logq];
-	ZZ cnstZZ = logp < 0 ? EvaluatorUtils::scaleUpToZZ(cnst, cipher.logp) : EvaluatorUtils::scaleUpToZZ(cnst, logp);
+    if (counting)
+        counter.Count_Addconst();
+
+    ZZ q = ring.qpows[cipher.logq];
+    ZZ cnstZZ = logp < 0 ? EvaluatorUtils::scaleUpToZZ(cnst, cipher.logp) : EvaluatorUtils::scaleUpToZZ(cnst, logp);
 	AddMod(cipher.bx[0], cipher.bx[0], cnstZZ, q);
 }
 
 void Scheme::addConstAndEqual(Ciphertext& cipher, complex<double> cnst, long logp) {
-	ZZ q = ring.qpows[cipher.logq];
-	ZZ cnstrZZ = logp < 0 ? EvaluatorUtils::scaleUpToZZ(cnst.real(), cipher.logp) : EvaluatorUtils::scaleUpToZZ(cnst.real(), logp);
+    if (counting)
+        counter.Count_Addconst();
+
+    ZZ q = ring.qpows[cipher.logq];
+    ZZ cnstrZZ = logp < 0 ? EvaluatorUtils::scaleUpToZZ(cnst.real(), cipher.logp) : EvaluatorUtils::scaleUpToZZ(cnst.real(), logp);
 	ZZ cnstiZZ = logp < 0 ? EvaluatorUtils::scaleUpToZZ(cnst.imag(), cipher.logp) : EvaluatorUtils::scaleUpToZZ(cnst.imag(), logp);
 	AddMod(cipher.bx[0], cipher.bx[0], cnstrZZ, q);
 	AddMod(cipher.bx[ring.Nh], cipher.bx[ring.Nh], cnstiZZ, q);
@@ -429,9 +458,12 @@ void Scheme::addConstAndEqual(Ciphertext& cipher, complex<double> cnst, long log
 //-----------------------------------------
 
 Ciphertext Scheme::sub(Ciphertext& cipher1, Ciphertext& cipher2) {
-	ZZ q = ring.qpows[cipher1.logq];
+    if (counting)
+        counter.Count_Sub();
 
-	ZZ* ax = new ZZ[ring.N];
+    ZZ q = ring.qpows[cipher1.logq];
+
+    ZZ* ax = new ZZ[ring.N];
 	ZZ* bx = new ZZ[ring.N];
 
 	ring.sub(ax, cipher1.ax, cipher2.ax, q);
@@ -441,16 +473,22 @@ Ciphertext Scheme::sub(Ciphertext& cipher1, Ciphertext& cipher2) {
 }
 
 void Scheme::subAndEqual(Ciphertext& cipher1, Ciphertext& cipher2) {
-	ZZ q = ring.qpows[cipher1.logq];
+    if (counting)
+        counter.Count_Sub();
 
-	ring.subAndEqual(cipher1.ax, cipher2.ax, q);
+    ZZ q = ring.qpows[cipher1.logq];
+
+    ring.subAndEqual(cipher1.ax, cipher2.ax, q);
 	ring.subAndEqual(cipher1.bx, cipher2.bx, q);
 }
 
 void Scheme::subAndEqual2(Ciphertext& cipher1, Ciphertext& cipher2) {
-	ZZ q = ring.qpows[cipher1.logq];
+    if (counting)
+        counter.Count_Sub();
 
-	ring.subAndEqual2(cipher1.ax, cipher2.ax, q);
+    ZZ q = ring.qpows[cipher1.logq];
+
+    ring.subAndEqual2(cipher1.ax, cipher2.ax, q);
 	ring.subAndEqual2(cipher1.bx, cipher2.bx, q);
 }
 
@@ -489,8 +527,11 @@ void Scheme::idivAndEqual(Ciphertext& cipher) {
 }
 
 Ciphertext Scheme::mult(Ciphertext& cipher1, Ciphertext& cipher2) {
-	ZZ q = ring.qpows[cipher1.logq];
-	ZZ qQ = ring.qpows[cipher1.logq + ring.logQ];
+    if (counting)
+        counter.Count_Mul();
+
+    ZZ q = ring.qpows[cipher1.logq];
+    ZZ qQ = ring.qpows[cipher1.logq + ring.logQ];
 
 	long np = ceil((2 + cipher1.logq + cipher2.logq + ring.logN + 2)/(PRIME_BIT_SIZE-1));
 
@@ -542,8 +583,11 @@ Ciphertext Scheme::mult(Ciphertext& cipher1, Ciphertext& cipher2) {
 }
 
 void Scheme::multAndEqual(Ciphertext& cipher1, Ciphertext& cipher2) {
-	ZZ q = ring.qpows[cipher1.logq];
-	ZZ qQ = ring.qpows[cipher1.logq + ring.logQ];
+    if (counting)
+        counter.Count_Mul();
+    
+    ZZ q = ring.qpows[cipher1.logq];
+    ZZ qQ = ring.qpows[cipher1.logq + ring.logQ];
 
 	long np = ceil((2 + cipher1.logq + cipher2.logq + ring.logN + 2)/(PRIME_BIT_SIZE-1));
 
@@ -594,8 +638,11 @@ void Scheme::multAndEqual(Ciphertext& cipher1, Ciphertext& cipher2) {
 //-----------------------------------------
 
 Ciphertext Scheme::square(Ciphertext& cipher) {
-	ZZ q = ring.qpows[cipher.logq];
-	ZZ qQ = ring.qpows[cipher.logq + ring.logQ];
+    if (counting)
+        counter.Count_Square();
+
+    ZZ q = ring.qpows[cipher.logq];
+    ZZ qQ = ring.qpows[cipher.logq + ring.logQ];
 
 	long np = ceil((2 * cipher.logq + ring.logN + 2)/(PRIME_BIT_SIZE-1));
 
@@ -641,8 +688,11 @@ Ciphertext Scheme::square(Ciphertext& cipher) {
 }
 
 void Scheme::squareAndEqual(Ciphertext& cipher) {
-	ZZ q = ring.qpows[cipher.logq];
-	ZZ qQ = ring.qpows[cipher.logq + ring.logQ];
+    if (counting)
+        counter.Count_Square();
+
+    ZZ q = ring.qpows[cipher.logq];
+    ZZ qQ = ring.qpows[cipher.logq + ring.logQ];
 
 	long np = ceil((2 + 2 * cipher.logq + ring.logN + 2)/(PRIME_BIT_SIZE-1));
 
@@ -691,9 +741,12 @@ void Scheme::squareAndEqual(Ciphertext& cipher) {
 //-----------------------------------------
 
 Ciphertext Scheme::multByConst(Ciphertext& cipher, double cnst, long logp) {
-	ZZ q = ring.qpows[cipher.logq];
+    if (counting)
+        counter.Count_Mulconst();
 
-	ZZ* ax = new ZZ[ring.N];
+    ZZ q = ring.qpows[cipher.logq];
+
+    ZZ* ax = new ZZ[ring.N];
 	ZZ* bx = new ZZ[ring.N];
 
 	ZZ cnstZZ = EvaluatorUtils::scaleUpToZZ(cnst, logp);
@@ -705,9 +758,11 @@ Ciphertext Scheme::multByConst(Ciphertext& cipher, double cnst, long logp) {
 }
 
 Ciphertext Scheme::multByConst(Ciphertext& cipher, complex<double> cnst, long logp) {
-	ZZ q = ring.qpows[cipher.logq];
+    if (counting)
+        counter.Count_Mulconst();
+    ZZ q = ring.qpows[cipher.logq];
 
-	ZZ* ax = new ZZ[ring.N];
+    ZZ* ax = new ZZ[ring.N];
 	ZZ* bx = new ZZ[ring.N];
 
 	ZZ cnstZZ = EvaluatorUtils::scaleUpToZZ(cnst.real(), logp);
@@ -723,8 +778,11 @@ Ciphertext Scheme::multByConstVec(Ciphertext& cipher, complex<double>* cnstVec, 
 }
 
 void Scheme::multByConstAndEqual(Ciphertext& cipher, double cnst, long logp) {
-	ZZ q = ring.qpows[cipher.logq];
-	ZZ cnstZZ = EvaluatorUtils::scaleUpToZZ(cnst, logp);
+    if (counting)
+        counter.Count_Mulconst();
+    
+    ZZ q = ring.qpows[cipher.logq];
+    ZZ cnstZZ = EvaluatorUtils::scaleUpToZZ(cnst, logp);
 
 	ring.multByConstAndEqual(cipher.ax, cnstZZ, q);
 	ring.multByConstAndEqual(cipher.bx, cnstZZ, q);
@@ -732,8 +790,11 @@ void Scheme::multByConstAndEqual(Ciphertext& cipher, double cnst, long logp) {
 }
 
 void Scheme::multByConstAndEqual(Ciphertext& cipher, RR& cnst, long logp) {
-	ZZ q = ring.qpows[cipher.logq];
-	ZZ cnstZZ = EvaluatorUtils::scaleUpToZZ(cnst, logp);
+    if (counting)
+        counter.Count_Mulconst();
+    
+    ZZ q = ring.qpows[cipher.logq];
+    ZZ cnstZZ = EvaluatorUtils::scaleUpToZZ(cnst, logp);
 
 	ring.multByConstAndEqual(cipher.ax, cnstZZ, q);
 	ring.multByConstAndEqual(cipher.bx, cnstZZ, q);
@@ -741,8 +802,11 @@ void Scheme::multByConstAndEqual(Ciphertext& cipher, RR& cnst, long logp) {
 }
 
 void Scheme::multByConstAndEqual(Ciphertext& cipher, complex<double> cnst, long logp) {
-	ZZ q = ring.qpows[cipher.logq];
-	ZZ cnstZZ = EvaluatorUtils::scaleUpToZZ(cnst.real(), logp);
+    if (counting)
+        counter.Count_Mulconst();
+    
+    ZZ q = ring.qpows[cipher.logq];
+    ZZ cnstZZ = EvaluatorUtils::scaleUpToZZ(cnst.real(), logp);
 
 	ring.multByConstAndEqual(cipher.ax, cnstZZ, q);
 	ring.multByConstAndEqual(cipher.bx, cnstZZ, q);
@@ -750,8 +814,11 @@ void Scheme::multByConstAndEqual(Ciphertext& cipher, complex<double> cnst, long 
 }
 
 Ciphertext Scheme::multByPoly(Ciphertext& cipher, ZZ* poly, long logp) {
-	ZZ q = ring.qpows[cipher.logq];
-	ZZ* ax = new ZZ[ring.N];
+    if (counting)
+        counter.Count_MulByPoly();
+
+    ZZ q = ring.qpows[cipher.logq];
+    ZZ* ax = new ZZ[ring.N];
 	ZZ* bx = new ZZ[ring.N];
 
 	long bnd = ring.maxBits(poly, ring.N);
@@ -764,8 +831,11 @@ Ciphertext Scheme::multByPoly(Ciphertext& cipher, ZZ* poly, long logp) {
 }
 
 Ciphertext Scheme::multByPolyNTT(Ciphertext& cipher, uint64_t* rpoly, long bnd, long logp) {
-	ZZ q = ring.qpows[cipher.logq];
-	ZZ* ax = new ZZ[ring.N];
+    if (counting)
+        counter.Count_MulByPoly();
+    
+    ZZ q = ring.qpows[cipher.logq];
+    ZZ* ax = new ZZ[ring.N];
 	ZZ* bx = new ZZ[ring.N];
 
 	long np = ceil((cipher.logq + bnd + ring.logN + 2)/(PRIME_BIT_SIZE-1));
@@ -777,9 +847,12 @@ Ciphertext Scheme::multByPolyNTT(Ciphertext& cipher, uint64_t* rpoly, long bnd, 
 }
 
 void Scheme::multByPolyAndEqual(Ciphertext& cipher, ZZ* poly, long logp) {
-	ZZ q = ring.qpows[cipher.logq];
+    if (counting)
+        counter.Count_MulByPoly();
+    
+    ZZ q = ring.qpows[cipher.logq];
 
-	long bnd = ring.maxBits(poly, ring.N);
+    long bnd = ring.maxBits(poly, ring.N);
 	long np = ceil((cipher.logq + bnd + ring.logN + 2)/(PRIME_BIT_SIZE-1));
 	uint64_t* rpoly = ring.toNTT(poly, np);
 	ring.multNTTAndEqual(cipher.ax, rpoly, np, q);
@@ -790,9 +863,12 @@ void Scheme::multByPolyAndEqual(Ciphertext& cipher, ZZ* poly, long logp) {
 }
 
 void Scheme::multByPolyNTTAndEqual(Ciphertext& cipher, uint64_t* rpoly, long bnd, long logp) {
-	ZZ q = ring.qpows[cipher.logq];
+    if (counting)
+        counter.Count_MulByPoly();
+    
+    ZZ q = ring.qpows[cipher.logq];
 
-	long np = ceil((cipher.logq + bnd + ring.logN + 2)/(PRIME_BIT_SIZE-1));
+    long np = ceil((cipher.logq + bnd + ring.logN + 2)/(PRIME_BIT_SIZE-1));
 	ring.multNTTAndEqual(cipher.ax, rpoly, np, q);
 	ring.multNTTAndEqual(cipher.bx, rpoly, np, q);
 
@@ -862,8 +938,11 @@ void Scheme::divByPo2AndEqual(Ciphertext& cipher, long bits) {
 //-----------------------------------------
 
 Ciphertext Scheme::reScaleBy(Ciphertext& cipher, long dlogq) {
-	ZZ* ax = new ZZ[ring.N];
-	ZZ* bx = new ZZ[ring.N];
+    if (counting)
+        counter.Count_Rescale();
+
+    ZZ *ax = new ZZ[ring.N];
+    ZZ* bx = new ZZ[ring.N];
 
 	ring.rightShift(ax, cipher.ax, dlogq);
 	ring.rightShift(bx, cipher.bx, dlogq);
@@ -872,8 +951,11 @@ Ciphertext Scheme::reScaleBy(Ciphertext& cipher, long dlogq) {
 }
 
 Ciphertext Scheme::reScaleTo(Ciphertext& cipher, long logq) {
-	long dlogq = cipher.logq - logq;
-	ZZ* ax = new ZZ[ring.N];
+    if (counting)
+        counter.Count_Rescale();
+    
+    long dlogq = cipher.logq - logq;
+    ZZ* ax = new ZZ[ring.N];
 	ZZ* bx = new ZZ[ring.N];
 
 	ring.rightShift(ax, cipher.ax, dlogq);
@@ -884,23 +966,32 @@ Ciphertext Scheme::reScaleTo(Ciphertext& cipher, long logq) {
 }
 
 void Scheme::reScaleByAndEqual(Ciphertext& cipher, long dlogq) {
-	ring.rightShiftAndEqual(cipher.ax, dlogq);
-	ring.rightShiftAndEqual(cipher.bx, dlogq);
+    if (counting)
+        counter.Count_Rescale();
+    
+    ring.rightShiftAndEqual(cipher.ax, dlogq);
+    ring.rightShiftAndEqual(cipher.bx, dlogq);
 	cipher.logq -= dlogq;
 	cipher.logp -= dlogq;
 }
 
 void Scheme::reScaleToAndEqual(Ciphertext& cipher, long logq) {
-	long dlogq = cipher.logq - logq;
-	ring.rightShiftAndEqual(cipher.ax, dlogq);
+    if (counting)
+        counter.Count_Rescale();
+    
+    long dlogq = cipher.logq - logq;
+    ring.rightShiftAndEqual(cipher.ax, dlogq);
 	ring.rightShiftAndEqual(cipher.bx, dlogq);
 	cipher.logq = logq;
 	cipher.logp -= dlogq;
 }
 
 Ciphertext Scheme::modDownBy(Ciphertext& cipher, long dlogq) {
-	ZZ q = ring.qpows[cipher.logq - dlogq];
-	ZZ* ax = new ZZ[ring.N];
+    if (counting)
+        counter.Count_ModDown();
+    
+    ZZ q = ring.qpows[cipher.logq - dlogq];
+    ZZ* ax = new ZZ[ring.N];
 	ZZ* bx = new ZZ[ring.N];
 
 	ring.mod(ax, cipher.ax, q);
@@ -909,16 +1000,22 @@ Ciphertext Scheme::modDownBy(Ciphertext& cipher, long dlogq) {
 }
 
 void Scheme::modDownByAndEqual(Ciphertext& cipher, long dlogq) {
-	ZZ q = ring.qpows[cipher.logq - dlogq];
-	ring.modAndEqual(cipher.ax, q);
+    if (counting)
+        counter.Count_ModDown();
+    
+    ZZ q = ring.qpows[cipher.logq - dlogq];
+    ring.modAndEqual(cipher.ax, q);
 	ring.modAndEqual(cipher.bx, q);
 	cipher.logq -= dlogq;
 }
 
 Ciphertext Scheme::modDownTo(Ciphertext& cipher, long logq) {
-	ZZ q = ring.qpows[logq];
+    if (counting)
+        counter.Count_ModDown();
+    
+    ZZ q = ring.qpows[logq];
 
-	ZZ* ax = new ZZ[ring.N];
+    ZZ* ax = new ZZ[ring.N];
 	ZZ* bx = new ZZ[ring.N];
 
 	ring.mod(ax, cipher.ax, q);
@@ -927,8 +1024,11 @@ Ciphertext Scheme::modDownTo(Ciphertext& cipher, long logq) {
 }
 
 void Scheme::modDownToAndEqual(Ciphertext& cipher, long logq) {
-	ZZ q = ring.qpows[logq];
-	cipher.logq = logq;
+    if (counting)
+        counter.Count_ModDown();
+    
+    ZZ q = ring.qpows[logq];
+    cipher.logq = logq;
 	ring.modAndEqual(cipher.ax, q);
 	ring.modAndEqual(cipher.bx, q);
 }
@@ -940,8 +1040,11 @@ void Scheme::modDownToAndEqual(Ciphertext& cipher, long logq) {
 
 
 Ciphertext Scheme::leftRotateFast(Ciphertext& cipher, long r) {
-	ZZ q = ring.qpows[cipher.logq];
-	ZZ qQ = ring.qpows[cipher.logq + ring.logQ];
+    if (counting)
+        counter.Count_RotateFast();
+
+    ZZ q = ring.qpows[cipher.logq];
+    ZZ qQ = ring.qpows[cipher.logq + ring.logQ];
 
 	ZZ* bxrot = new ZZ[ring.N];
 	ZZ* axrot = new ZZ[ring.N];
@@ -974,8 +1077,11 @@ Ciphertext Scheme::leftRotateFast(Ciphertext& cipher, long r) {
 }
 
 void Scheme::leftRotateFastAndEqual(Ciphertext& cipher, long r) {
-	ZZ q = ring.qpows[cipher.logq];
-	ZZ qQ = ring.qpows[cipher.logq + ring.logQ];
+    if (counting)
+        counter.Count_RotateFast();
+    
+    ZZ q = ring.qpows[cipher.logq];
+    ZZ qQ = ring.qpows[cipher.logq + ring.logQ];
 
 	ZZ* bxrot = new ZZ[ring.N];
 	ZZ* axrot = new ZZ[ring.N];
@@ -1001,13 +1107,13 @@ void Scheme::leftRotateFastAndEqual(Ciphertext& cipher, long r) {
 }
 
 Ciphertext Scheme::rightRotateFast(Ciphertext& cipher, long r) {
-	long rr = ring.Nh - r;
-	return leftRotateFast(cipher, rr);
+    long rr = ring.Nh - r;
+    return leftRotateFast(cipher, rr);
 }
 
-void Scheme::rightRotateFastAndEqual(Ciphertext& cipher, long r) {
-	long rr = ring.Nh - r;
-	leftRotateFastAndEqual(cipher, rr);
+void Scheme::rightRotateFastAndEqual(Ciphertext& cipher, long r) {   
+    long rr = ring.Nh - r;
+    leftRotateFastAndEqual(cipher, rr);
 }
 
 Ciphertext Scheme::leftRotate(Ciphertext& cipher, long r) {
@@ -1043,6 +1149,9 @@ void Scheme::rightRotateAndEqual(Ciphertext& cipher, long r) {
 }
 
 Ciphertext Scheme::conjugate(Ciphertext& cipher) {
+    if (counting)
+        counter.Count_Conjugate();
+
 	ZZ q = ring.qpows[cipher.logq];
 	ZZ qQ = ring.qpows[cipher.logq + ring.logQ];
 
@@ -1077,8 +1186,11 @@ Ciphertext Scheme::conjugate(Ciphertext& cipher) {
 }
 
 void Scheme::conjugateAndEqual(Ciphertext& cipher) {
-	ZZ q = ring.qpows[cipher.logq];
-	ZZ qQ = ring.qpows[cipher.logq + ring.logQ];
+    if (counting)
+        counter.Count_Conjugate();
+
+    ZZ q = ring.qpows[cipher.logq];
+    ZZ qQ = ring.qpows[cipher.logq + ring.logQ];
 
 	ZZ* bxconj = new ZZ[ring.N];
 	ZZ* axconj = new ZZ[ring.N];
@@ -1271,7 +1383,7 @@ void Scheme::evalExpAndEqual(Ciphertext& cipher, long logT, long logI) {
 	long slots = cipher.n;
 	long logSlots = log2(slots);
 	BootContext bootContext = ring.bootContextMap.at(logSlots);
-	if(logSlots < ring.logNh) {
+	if (logSlots < ring.logNh) {
 		Ciphertext tmp = conjugate(cipher);
 		subAndEqual(cipher, tmp);
 		divByPo2AndEqual(cipher, logT + 1); // bitDown: logT + 1
@@ -1323,6 +1435,9 @@ void Scheme::evalExpAndEqual(Ciphertext& cipher, long logT, long logI) {
 }
 
 void Scheme::bootstrapAndEqual(Ciphertext& cipher, long logq, long logQ, long logT, long logI) {
+    if (counting)
+        counter.count_Bootstrap();
+
 	long logSlots = log2(cipher.n);
 	long logp = cipher.logp;
 

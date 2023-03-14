@@ -73,7 +73,7 @@ namespace SecureML {
 		// Training by repeating plainUpdate process parms.numIter times //
 		void plainTraining(double* wData, double** zData, long factorNum, long sampleNum);
 
-		// Decrypt encrypted wData //
+		// Decrypt encrypted wData encWData -> wData//
 		void DecryptwData(double* wData, Ciphertext* encWData, long factorNum);
 
 		// Decrypt and save //
@@ -82,6 +82,7 @@ namespace SecureML {
 		// Decrypt and print //
 		void DecryptAndPrint(string msg, Ciphertext cipher);
 
+        void printCnt() { scheme.printCnt(); }
 	};
 }
 

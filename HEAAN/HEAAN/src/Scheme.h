@@ -20,6 +20,7 @@
 #include "Key.h"
 #include "EvaluatorUtils.h"
 #include "Ring.h"
+#include "Mycounter.h"
 
 using namespace std;
 using namespace NTL;
@@ -30,6 +31,14 @@ static long CONJUGATION = 2;
 
 class Scheme {
 private:
+
+    // ---------- statistic part ----------
+
+    Counter counter;
+    bool counting;
+    ///////////////////////////////////////
+
+
 public:
 	Ring& ring;
 
@@ -41,7 +50,7 @@ public:
 	map<long, string> serKeyMap; ///< contain Encryption, Multiplication and Conjugation keys, if generated
 	map<long, string> serLeftRotKeyMap; ///< contain left rotation keys, if generated
 
-	Scheme(SecretKey& secretKey, Ring& ring, bool isSerialized = false);
+	Scheme(SecretKey& secretKey, Ring& ring, bool isSerialized = false, bool _counting = false);
 
 	//----------------------------------------------------------------------------------
 	//   KEYS GENERATION
@@ -254,6 +263,8 @@ public:
 	void bootstrapAndEqual(Ciphertext& cipher, long logq, long logQ, long logT, long logI = 4);
 
 	Ciphertext bootstrap(Ciphertext& cipher, long logq, long logQ, long logT, long logI = 4);
+
+    void printCnt() { counter.printCnt(); }
 
 };
 

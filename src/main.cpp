@@ -48,7 +48,7 @@ void test(string file, string file_test, bool isFirst, long numIter, double lear
 	START();
 	Ring ring(params.logN, params.logQBoot);
 	SecretKey sk(ring);
-	Scheme scheme(sk, ring, true); ///< save all public keys in /serkey folder
+	Scheme scheme(sk, ring, true, true); ///< save all public keys in /serkey folder
 	if(isEncrypted) {
 		scheme.addLeftRotKeys(sk);
 		scheme.addRightRotKeys(sk);
@@ -76,6 +76,8 @@ void test(string file, string file_test, bool isFirst, long numIter, double lear
 	if(isEncrypted) secureML.Training(encWData, factorNum, sampleNum, pwData, zData);
 	else secureML.plainTraining(pwData, zData, factorNum, sampleNum);
 	END(); PRINTTIME("\n - Training");
+
+    secureML.printCnt();
 
 	if(isEncrypted) {
 		/* Decrypt encWData using secretkey sk and save dwData in dwData.csv

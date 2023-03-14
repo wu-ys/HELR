@@ -13,23 +13,24 @@ namespace SecureML
 		Ciphertext* encIPvec = new Ciphertext[params.cnum];
 		pool.exec_index(params.cnum, [&](long i) {
 			Ciphertext tmp = scheme.modDownTo(encZData[i], encVData[i].logq);
-			encIPvec[i] = scheme.mult(tmp, encVData[i]); //> logp: 2 * wBits
-			for(long j = 0; j < params.bBits; j++) {
+            encIPvec[i] = scheme.mult(tmp, encVData[i]); //> logp: 2 * wBits
+            for(long j = 0; j < params.bBits; j++) {
 				Ciphertext encrot = scheme.leftRotateFast(encIPvec[i], 1 << j);
-				scheme.addAndEqual(encIPvec[i], encrot); //> logp: 2 * wBits
-			}
+                scheme.addAndEqual(encIPvec[i], encrot); //> logp: 2 * wBits
+            }
 		});
 		////////////////////////////////
 		Ciphertext encIP = encIPvec[0];
 		for(long i = 1; i < params.cnum; i++) {
 			scheme.addAndEqual(encIP, encIPvec[i]); //> logp: 2 * wBits
-		}
+        }
 		////////////////////////////////> Multiply Dummy Matrix
 		scheme.multByPolyAndEqual(encIP, dummy, params.pBits); //> logp: 2 * wBits + pBits
-		////////////////////////////////
-		for(long i = 0; i < params.bBits; i++) {
+        ////////////////////////////////
+		for (long i = 0; i < params.bBits; i++) {
 			Ciphertext tmp = scheme.rightRotateFast(encIP, 1 << i);
-			scheme.addAndEqual(encIP, tmp);
+
+            scheme.addAndEqual(encIP, tmp);
 		}
 		//> Re-scaling the scaling factor
 		scheme.reScaleByAndEqual(encIP, params.pBits + params.wBits); //> logp: wBits, bitDown: wBits + pBits
@@ -43,24 +44,24 @@ namespace SecureML
 		scheme.addConstAndEqual(encIPsqr, degree3[1] / degree3[3], 2 * params.wBits);
 		scheme.reScaleByAndEqual(encIPsqr, params.wBits);
 		////////////////////////////////
-		pool.exec_index(params.cnum, [&](long i) {
-			encGrad[i] = scheme.multByConst(encZData[i], (gamma * degree3[3]), 2 * params.wBits);
-			scheme.reScaleByAndEqual(encGrad[i], 2 * params.wBits);
-			scheme.modDownToAndEqual(encGrad[i], encIP.logq);
-			scheme.multAndEqual(encGrad[i], encIP);
-			scheme.reScaleByAndEqual(encGrad[i], params.wBits);
-			scheme.multAndEqual(encGrad[i], encIPsqr);
-			scheme.reScaleByAndEqual(encGrad[i], params.wBits);
-			Ciphertext tmp = scheme.multByConst(encZData[i], (gamma * degree3[0]), 2 * params.wBits);
-			scheme.reScaleByAndEqual(tmp, 2 * params.wBits);
-			scheme.modDownToAndEqual(tmp, encGrad[i].logq);
-			scheme.addAndEqual(encGrad[i], tmp);
-			for (long l = params.bBits; l < params.sBits; ++l) {
-				Ciphertext tmp = scheme.leftRotateFast(encGrad[i], 1 << l);
-				scheme.addAndEqual(encGrad[i], tmp);
-			}
-		});
-	}
+        pool.exec_index(params.cnum, [&](long i)
+                        {
+			encGrad[i] = scheme.multByConst(encZData[i], (gamma * degree3[3]), 2 * params.wBits);                
+            scheme.reScaleByAndEqual(encGrad[i], 2 * params.wBits);
+            scheme.modDownToAndEqual(encGrad[i], encIP.logq);
+            scheme.multAndEqual(encGrad[i], encIP);
+            scheme.reScaleByAndEqual(encGrad[i], params.wBits);
+            scheme.multAndEqual(encGrad[i], encIPsqr);
+            scheme.reScaleByAndEqual(encGrad[i], params.wBits);
+            Ciphertext tmp = scheme.multByConst(encZData[i], (gamma * degree3[0]), 2 * params.wBits);
+            scheme.reScaleByAndEqual(tmp, 2 * params.wBits);
+            scheme.modDownToAndEqual(tmp, encGrad[i].logq);
+            scheme.addAndEqual(encGrad[i], tmp);
+            for (long l = params.bBits; l < params.sBits; ++l) {
+                Ciphertext tmp = scheme.leftRotateFast(encGrad[i], 1 << l);
+                scheme.addAndEqual(encGrad[i], tmp);
+            } });
+    }
 	/****************************************************************************/
 	void ML::plainInnerProduct(double* ip, double** zData, double* vData, long factorNum, long sampleNum) {
 		for(long i = 0; i < sampleNum; i++) {
@@ -118,16 +119,16 @@ namespace SecureML
 		// Update encWData and encVData (multi-threading) //
 		pool.exec_index(params.cnum, [&](long i) {
 			Ciphertext tmp1 = scheme.modDownTo(encVData[i], encGrad[i].logq);
-			scheme.addAndEqual(tmp1, encGrad[i]);
-			Ciphertext tmp2 = scheme.multByConst(encWData[i], eta, params.wBits + params.pBits);
-			scheme.reScaleByAndEqual(tmp2, params.wBits + params.pBits);
-			encVData[i] = scheme.multByConst(tmp1, (1. - eta), params.pBits);
-			scheme.reScaleByAndEqual(encVData[i], params.pBits);
-			scheme.modDownToAndEqual(tmp2, encVData[i].logq);
-			scheme.addAndEqual(encVData[i], tmp2);
-			encWData[i] = tmp1;
+            scheme.addAndEqual(tmp1, encGrad[i]);
+            Ciphertext tmp2 = scheme.multByConst(encWData[i], eta, params.wBits + params.pBits);
+            scheme.reScaleByAndEqual(tmp2, params.wBits + params.pBits);
+            encVData[i] = scheme.multByConst(tmp1, (1. - eta), params.pBits);
+            scheme.reScaleByAndEqual(encVData[i], params.pBits);
+            scheme.modDownToAndEqual(tmp2, encVData[i].logq);
+            scheme.addAndEqual(encVData[i], tmp2);
+            encWData[i] = tmp1;
 			scheme.modDownToAndEqual(encWData[i], encVData[i].logq);
-			tmp1.kill();
+            tmp1.kill();
 			tmp2.kill();
 		});
 		delete[] encZData;
@@ -135,6 +136,7 @@ namespace SecureML
 	}
 	/****************************************************************************/
 	void ML::Training(Ciphertext* encWData, long factorNum, long sampleNum, double* wData, double** zData) {
+        // a training process begins here
 		chrono::high_resolution_clock::time_point t1, t2;
 
 		double gamma, eta;
@@ -159,11 +161,11 @@ namespace SecureML
 		gamma = params.alpha / params.blockSize;
 		long blockNum = params.sampleNum / params.blockSize;
 
-		double* dwData = new double[factorNum]();
+		double* dwData = new double[factorNum](); // for storing decrypted data
 		double auc, accuracy;
 
 		long factorNumTest, sampleNumTest;
-		double** zDataTest = zDataFromFile(params.path_to_test_file, factorNumTest, sampleNumTest, params.isfirst);
+		double** zDataTest = zDataFromFile(params.path_to_test_file, factorNumTest, sampleNumTest, params.isfirst); // zData for testing
 		normalizeZData(zDataTest, factorNumTest, sampleNumTest);
 
 		for(long iter = 0; iter < params.iterNum; iter++) {
@@ -182,6 +184,7 @@ namespace SecureML
 
 			cout << "** encrypted" << endl;
 			start();
+            // main calculation here
 			Update(encWData, encVData, gamma, eta, blockID);
 			end(); print("update");
 
@@ -191,6 +194,7 @@ namespace SecureML
 			alpha0 = alpha1;
 			alpha1 = (1. + sqrt(1. + 4.0 * alpha0 * alpha0)) / 2.0;
 
+            // some condition triggers bootstrapping
 			if(iter % params.iterPerBoot == params.iterPerBoot - 1 && iter < params.iterNum - 1) {
 
 				cout << "\nBootstrapping START!!!" << endl;
@@ -202,9 +206,8 @@ namespace SecureML
 				});
 				pool.exec_index(params.cnum, [&](long i) {
 					encVData[i].n = params.batch;
-					scheme.bootstrapAndEqual(encVData[i], params.logq, params.logQBoot, params.logT, params.logI);
-					encVData[i].n = params.slots;
-
+                    scheme.bootstrapAndEqual(encVData[i], params.logq, params.logQBoot, params.logT, params.logI);
+                    encVData[i].n = params.slots;
 				});
 				end(); print("bootstrapping");
 				cout << "Bootstrapping END!!!" << endl;
